@@ -1,56 +1,56 @@
-import path from 'path'
-import RedisStore from './lib/RedisStore'
-import { serialize, deserialize } from './lib/serializer'
+import path from "path";
+import RedisStore from "./lib/RedisStore";
+import { serialize, deserialize } from "./lib/serializer";
 export default function index({
-                                getCacheData,
-                                url = 'redis://127.0.0.1:6379',
-                                prefix = 'r-',
-                                appendHost = true,
-                                disable = false,
-                                ignoreConnectionErrors = false,
-                              }) {
-  const { nuxt } = this
+  getCacheData,
+  url = "redis://127.0.0.1:6379",
+  prefix = "r-",
+  appendHost = true,
+  disable = false,
+  ignoreConnectionErrors = false,
+}) {
+  const { nuxt } = this;
 
-  nuxt.hook('render:before', (renderer) => {
-    const renderRoute = renderer.renderRoute.bind(renderer)
+  nuxt.hook("render:before", (renderer) => {
+    const renderRoute = renderer.renderRoute.bind(renderer);
     renderer.renderRoute = function (route, context) {
-      const host = context.req.headers.host
-      const cacheData = getCacheData ? getCacheData(route, context) : null
-      if (!cacheData || disable) return renderRoute(route, context)
+      const host = context.req.headers.host;
+      const cacheData = getCacheData ? getCacheData(route, context) : null;
+      if (!cacheData || disable) return renderRoute(route, context);
       // eslint-disable-next-line prefer-const
-      let { key, expire } = cacheData
-      key = appendHost ? key + '-' + host : key
-        const redisStore = new RedisStore(
-            cacheData.url || url,
-            false,
-            prefix,
-            true,
-            ignoreConnectionErrors
-        )
+      let { key, expire } = cacheData;
+      key = appendHost ? key + "-" + host : key;
+      const redisStore = new RedisStore(
+        cacheData.url || url,
+        false,
+        prefix,
+        true,
+        ignoreConnectionErrors
+      );
 
-        function renderAndSetCacheKey() {
-          return renderRoute(route, context).then(async function (result) {
-            if (!result.error && !result.redirected) {
-              await redisStore.write(key, serialize(result), expire)
-            }
-            return result
-          })
-        }
+      function renderAndSetCacheKey() {
+        return renderRoute(route, context).then(async function (result) {
+          if (!result.error && !result.redirected) {
+            await redisStore.write(key, serialize(result), expire);
+          }
+          return result;
+        });
+      }
 
-      return new Promise(async (resolve)=>{
-        try{
-          const cachedResult=await redisStore.read(key)
+      return new Promise(async (resolve) => {
+        try {
+          const cachedResult = await redisStore.read(key);
           if (cachedResult) {
-             resolve(deserialize(cachedResult))
-           }else{
-             resolve(renderAndSetCacheKey())
-           }
-        }catch{
-          resolve(renderRoute(route, context))
+            resolve(deserialize(cachedResult));
+          } else {
+            resolve(renderAndSetCacheKey());
+          }
+        } catch {
+          resolve(renderRoute(route, context));
         }
-      }).finally(()=>{
-          redisStore.disconnect()
-      })
+      }).finally(() => {
+        redisStore.disconnect();
+      });
 
       // try {
       //   function renderAndSetCacheKey() {
@@ -73,15 +73,15 @@ export default function index({
       // } finally {
       //   redisStore.disconnect()
       // }
-    }
-  })
+    };
+  });
   // this.addTemplate({
   //   fileName: 'nuxt-perfect-cache/RedisStore.js',
   //   src: path.resolve(__dirname, 'lib/RedisStore.js'),
   // })
   this.addPlugin({
-    fileName: 'nuxt-perfect-cache/plugin.js',
-    src: path.resolve(__dirname, 'plugin.js'),
+    fileName: "nuxt-perfect-cache/plugin.js",
+    src: path.resolve(__dirname, "plugin.js"),
     options: {
       url,
       prefix,
@@ -89,6 +89,6 @@ export default function index({
       disable,
       ignoreConnectionErrors,
     },
-  })
+  });
 }
-module.exports.meta = require('./package.json')
+module.exports.meta = require("./package.json");
